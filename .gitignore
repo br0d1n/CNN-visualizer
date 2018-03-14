@@ -4,3 +4,4 @@
 # Pycharm stuff
 .idea
 *.pyc
+tensorboard
