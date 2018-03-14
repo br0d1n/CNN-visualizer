@@ -13,9 +13,7 @@ def load_graph_pb(path):
             if node.attr['padding'].s == "VALID":
                 node.attr['padding'].s = "SAME"
 
-        # changing the padding for the avgpool0 layer, in order to keep dimensions the same when finding the gradient
-        # graph_def.node[333].attr['padding'].s = str.encode("SAME")
-        # tf.import_graph_def(graph_def, name='')
+        tf.import_graph_def(graph_def, name='')
 
 
 def load_labels(path):
