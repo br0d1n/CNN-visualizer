@@ -1,17 +1,23 @@
+
+""" just a temporary entry-point for testing stuff. Nothing important here. """
+
 import PIL.Image
 import numpy as np
+import tensorflow as tf
 
 import transformations as trans
 import visualize as vis
+import load_model as load
+import misc
 
 
-image_array = np.float32(PIL.Image.open("cat.jpg"))
-padded_image = trans.pad(image_array, 50, constant_values=100)
-rotated_image = trans.rotate(padded_image, 10)
-rotated_image = trans.rotate_random(rotated_image)
-scaled_image = trans.scale(rotated_image, 1.2)
-saturated_image = trans.saturate_random(scaled_image)
-jitter_image = trans.jitter(saturated_image, 50)
-blurred_image = trans.blur(jitter_image, value=2)
+model_path = "sample_models/inception/tensorflow_inception_graph.pb"
+input_name = "input:0"
 
-vis.show_image(blurred_image)
+load.load_graph_pb(model_path)
+
+vis.visualize_layer("mixed4a:0", input_name, steps=300)
+
+
+
+
