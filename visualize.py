@@ -75,7 +75,7 @@ def visualize_layer(layer_name, input_name, steps=200, step_size=3):
         optimized_image = trans.pad(optimized_image, 16)
 
         for i in range(steps):
-            print i
+            print (i)
 
             optimized_image = trans.jitter(optimized_image, 8)
             optimized_image = trans.scale_random(optimized_image)

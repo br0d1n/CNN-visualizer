@@ -1,8 +1,12 @@
 [[source]]
 url = "https://pypi.python.org/simple"
 verify_ssl = true
+[requires]
+python_version = "3.6"
 [packages]
-tensorflow-gpu = "==1.4.0"
 pillow = "*"
+tensorflow-gpu = "==1.4.1"
+
+
 
 
