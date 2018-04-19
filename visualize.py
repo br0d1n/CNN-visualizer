@@ -1,94 +1,87 @@
 
-"""This file contains functions for visualizing different parts of a CNN, in
-addition to some other ones related to visualization"""
+""" This file contains functions for visualizing different parts of a CNN, in
+addition to some other ones related to visualization """
 
 import tensorflow as tf
-import numpy as np
-import random
+import time
 
-import transformations as trans
+import graph_builder
 import misc
 
 
-def compute_gradient(image, gradient_function, input_name, sess):
+# TODO: fix this
+def visualize_layer(model_path, input_name, opt, x_dim=128, y_dim=128, steps=150,
+                    pad=None, jitter=None, rotate=None, scale=None, optimizer=None):
 
-    image = tf.expand_dims(image, axis=0)
-    feed_dict = {input_name: image.eval()}
-    gradient = sess.run(gradient_function, feed_dict)[0]
-    gradient = gradient / (1e-8 + np.std(gradient))
+    num_visualizations = 1
+    if isinstance(opt, list) and len(opt[0]) == 2:
+        num_visualizations = len(opt)
 
-    return gradient
+    # start the session
+    with tf.Graph().as_default() as graph, tf.Session() as sess:
+
+        # build the entire graph (parametrisation of the input space + transforms + the imported graph)
+        graph_builder.build(model_path, input_name, x_dim, y_dim, pad, jitter, rotate, scale)
+
+        # select tensors that we might want to access later
+        image_tensor = graph.get_tensor_by_name('image:0')
+        trans_tensor = graph.get_tensor_by_name('transformed:0')
+
+        # create the optimizer to the graph
+        optimizer = optimizer or tf.train.AdamOptimizer(learning_rate=0.06)
+
+        # train the network to optimize the image(s)
+        start_time = time.time()
+        images = []
+        for n in range(num_visualizations):
+
+            # create the loss function
+            # TODO: make it easy to mix different layers etc. here
+            if num_visualizations > 1:
+                loss = create_loss(opt[n], graph)
+            else:
+                loss = create_loss(opt, graph)
+
+            # add the optimizer
+            opt_tensor = optimizer.minimize(-loss)
+
+            # initalize variables
+            sess.run(tf.global_variables_initializer())
+
+            for i in range(steps):
+                print(i)
+
+                # save the current optimized image (for testing and cool animations)
+                img = image_tensor.eval()[0]
+                misc.save_image(img, "out/test" + str(i) + ".jpg")
+
+                # optimize the image a little bit
+                sess.run([loss, opt_tensor])
+
+            img = image_tensor.eval()[0]
+            images.append(img)
+
+        duration = time.time() - start_time
+        print("visualization complete\ttime:", duration)
+        return images
 
 
-# Need to use this thing if images are too large for memory
-def compute_gradient_from_image_segments(image, gradient_function, input_name, sess, segment_dim=200):
+def create_loss(opt, graph):
 
-    # array containing zeroes, which will be filled up with gradients from each segment
-    gradient = np.zeros_like(image)
-    y_max = len(gradient)
-    x_max = len(gradient[0])
+    layer_name = None
+    channel = None
 
-    # the starting point of the grid we use to segment the image
-    # to divide the picture differently each time, we introduce some randomness
-    y_start = random.randint(-segment_dim+1, 0)
-    x_origin = random.randint(-segment_dim+1, 0)
-    while y_start < y_max:
+    # find the type of objective we are trying to optimize for
+    if isinstance(opt, str):
+        layer_name = opt
+    elif isinstance(opt, tuple):
+        layer_name = opt[0]
+        channel = opt[1]
 
-        # find the beginning and end of the current segment. Can't be outside the image
-        y_end = min(y_start + segment_dim, y_max)
-        y_start = max(0, y_start)
+    layer_tensor = graph.get_tensor_by_name(layer_name)
+    loss = tf.reduce_mean(layer_tensor[:, :, :, channel])
 
-        # randomness in the x-direction
-        x_start = x_origin
-        while x_start < x_max:
-
-            x_end = min(x_start + segment_dim, x_max)
-            x_start = max(0, x_start)
-
-            # get the current image-segment, witch we will compute the gradient for
-            image_segment = image[y_start:y_end, x_start:x_end, :]
-
-            # compute the gradient for the current segment
-            segment_gradient = compute_gradient(image_segment, gradient_function, input_name, sess)
-
-            # adding the segment-gradient to the gradient for the entire image
-            gradient[y_start:y_end, x_start:x_end, :] = segment_gradient
-            x_start = x_end
-
-        # continue the next segment, where the last one ended
-        y_start = y_end
-
-    return gradient
+    return loss
 
 
-def visualize_layer(layer_name, input_name, steps=200, step_size=3):
-
-    with tf.Session() as sess:
-        layer_tensor = sess.graph.get_tensor_by_name(layer_name)
-        layer_tensor = tf.square(layer_tensor)
-        input_tensor = sess.graph.get_tensor_by_name(input_name)
-        layer_mean = tf.reduce_mean(layer_tensor[:, :, :, :])
-        gradient_function = tf.gradients(layer_mean, input_tensor)[0]
-
-        optimized_image = misc.random_noise_img(200)
-        optimized_image = tf.convert_to_tensor(optimized_image, dtype=np.float32)
-        optimized_image = trans.pad(optimized_image, 16)
-
-        for i in range(steps):
-            print (i)
-
-            optimized_image = trans.jitter(optimized_image, 8)
-            optimized_image = trans.scale_random(optimized_image)
-            optimized_image = trans.rotate_random(optimized_image)
-            optimized_image = trans.jitter(optimized_image, 2)
-
-            gradient = compute_gradient(optimized_image, gradient_function, input_name, sess)
-
-            optimized_image = tf.add(optimized_image, tf.multiply(gradient, step_size))
-
-            if i % 2 == 0:
-
-                misc.save_image(optimized_image, "out/test"+str(i)+".jpg")
-
-        misc.show_image(optimized_image)
 

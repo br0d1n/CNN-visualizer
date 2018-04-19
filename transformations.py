@@ -1,93 +1,64 @@
 
-"""This file contains functions for transforming tensorflow tensors that
+""" This file contains functions for transforming tensorflow tensors that
 represents images. These are used in order to get better-looking results
-when performing feature-visualizations."""
+when performing feature-visualizations. """
 
 import tensorflow as tf
-import numpy as np
 import math
-import random
-import PIL.Image
-import PIL.ImageFilter
+
+# TODO: fill in the rest of the functions
 
 
-def pad(image, pixels, constant_values=117):
-    padding = tf.constant([[pixels, pixels, ], [pixels, pixels], [0, 0]])
-    image = tf.pad(image, padding, constant_values=constant_values)
-    return image
+def random_param(param_list):
+    random_index = tf.random_uniform((), 0, len(param_list), dtype='int32')
+    param = tf.constant(param_list)[random_index]
+    param = tf.identity(param, name='random')
+    return param
 
 
-def rotate(image, angle):
-    dimensions = image.get_shape().as_list()
-    height, width = dimensions[0], dimensions[1]
-    image = pad(image, 40)  # pad sufficiently to avoid black lines
-    radian = angle * math.pi / 180
-    image = tf.contrib.image.rotate(image, radian)
-    image = tf.image.resize_image_with_crop_or_pad(image, height, width)
-    return image
+def pad(tensor, pad):
+    padding = tf.constant([[0, 0], [pad, pad], [pad, pad], [0, 0]])
+    return tf.pad(tensor, padding, constant_values=0.459)
 
 
-def rotate_random(image, min_degree=-2, max_degree=2):
-    dimensions = image.get_shape().as_list()
-    height, width = dimensions[0], dimensions[1]
-    image = pad(image, 40)
-    angle = random.randint(min_degree, max_degree)
-    radian = angle * math.pi / 180
-    image = tf.contrib.image.rotate(image, radian)
-    image = tf.image.resize_image_with_crop_or_pad(image, height, width)
-    return image
+def jitter(tensor, jitter_x, jitter_y):
+    pass
 
 
-def scale(image, factor):
-    dimensions = image.get_shape().as_list()
-    height, width = dimensions[0], dimensions[1]
-    scale_height, scale_width = int(height * factor), int(width * factor)
-    scale_size = tf.constant([scale_height, scale_width], tf.int32)
-    image = tf.expand_dims(image, 0)
-    image = tf.image.resize_bilinear(image, scale_size)
-    image = tf.squeeze(image)
-    image = pad(image, 20)
-    image = tf.image.resize_image_with_crop_or_pad(image, height, width)
-    return image
+# the following function is really just a random crop ..this implementation assumes that there is
+# sufficient padding at the start, so a random crop sorta has the same effect on helping the visualization
+def random_jitter(tensor, pixels):
+    dimensions = tf.shape(tensor)
+    batches, height, width = dimensions[0], dimensions[1], dimensions[2]
+    new_dimensions = [batches, height - pixels, width - pixels, 3]
+    tensor = tf.random_crop(tensor, new_dimensions)
+    return tensor
 
 
-def scale_random(image, low_factor=0.99, high_factor=1.01):
-    factor = random.uniform(low_factor, high_factor)
-    dimensions = image.get_shape().as_list()
-    height, width = dimensions[0], dimensions[1]
-    scale_height, scale_width = int(height * factor), int(width * factor)
-    scale_size = tf.constant([scale_height, scale_width], tf.int32)
-    image = tf.expand_dims(image, 0)
-    image = tf.image.resize_bilinear(image, scale_size)
-    image = tf.squeeze(image)
-    image = pad(image, 20)
-    image = tf.image.resize_image_with_crop_or_pad(image, height, width)
-    return image
+def rotate(tensor, angle):
+    pass
 
 
-def jitter(image, max_pixels):
-    pixels_x = random.randrange(-max_pixels, max_pixels+1)
-    pixels_y = random.randrange(-max_pixels, max_pixels+1)
-    dimensions = image.get_shape().as_list()
-
-    width = 0 if pixels_x < 0 else dimensions[1]
-    image = tf.concat([image[:, width - pixels_x:], image[:, :width - pixels_x]], axis=1)
-
-    height = 0 if pixels_y < 0 else dimensions[0]
-    image = tf.concat([image[height - pixels_y:, :], image[:height - pixels_y, :]], axis=0)
-
-    return image
+def random_rotate(tensor, param_list):
+    angle = random_param(param_list)
+    angle = tf.cast(angle, dtype='float32')
+    radian = angle * tf.constant(math.pi, dtype='float32') / 180
+    tensor = tf.contrib.image.rotate(tensor, radian)
+    return tensor
 
 
-def blur(image, value=2):
-    with tf.Session():
-        image = PIL.Image.fromarray(image.eval().astype('uint8'))
-    image = image.filter(PIL.ImageFilter.GaussianBlur(radius=value))
-    image = np.float32(image)
-    image = tf.convert_to_tensor(image)
-    return image
+def scale(tensor, factor):
+    pass
 
 
-def saturate_random(image, low_factor=0.8, high_factor=1.2):
-    image = tf.image.random_saturation(image, low_factor, high_factor)
-    return image
+def random_scale(tensor, param_list):
+    factor = random_param(param_list)
+    dimensions = tf.shape(tensor)
+    height, width = tf.cast(dimensions[1], dtype='float32'), tf.cast(dimensions[2], dtype='float32')
+    scale_height, scale_width = tf.cast(height * factor, dtype='int32'), tf.cast(width * factor, dtype='int32')
+    tensor = tf.image.resize_bilinear(tensor, [scale_height, scale_width])
+    return tensor
+
+
+
+
