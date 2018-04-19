@@ -8,25 +8,28 @@ import transformations as trans
 import input_parameterization as par
 
 
-def build(path, input_name, x_dim=200, y_dim=200, pad=None, jitter=None, rotate=None, scale=None):
+def build(path, input_name, x_dim=200, y_dim=200, pad=None, jitter=None, rotate=None, scale=None, dream_img=None):
 
     # load the pre-trained graph we are going to visualize
     graph_def = load_pb_graph(path)
 
     # parametrize the input space for better results
-    # TODO: give the option to use other parametrization-spaces than just fourier
-    fft_tensor = par.fft_img(1, x_dim, y_dim)
+    # TODO: give the option to use more parameterization spaces
+    if dream_img is None:
+        input_tensor = par.fft_img(x_dim, y_dim)
+    else:
+        input_tensor = par.naive_input(x_dim, y_dim, dream_img)
 
     # build a transformation graph, following the input-graph
-    trans_graph = add_transforms(fft_tensor, pad, jitter, rotate, scale)
+    trans_graph = add_transforms(input_tensor, pad, jitter, rotate, scale)
     trans_graph = tf.identity(trans_graph, name='transformed')
 
     # change the range
     lo, hi = (-117, 255 - 117)
-    input_graph = lo + trans_graph * (hi - lo)
+    prep_graph = lo + trans_graph * (hi - lo)
 
     # connect the graphs
-    tf.import_graph_def(graph_def, {input_name: input_graph}, name='')
+    tf.import_graph_def(graph_def, {input_name: prep_graph}, name='')
 
     # tensorboard stuff ..uncomment to take a look at the graph
     # logdir = "tensorboard/"

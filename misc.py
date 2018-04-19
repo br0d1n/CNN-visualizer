@@ -20,6 +20,12 @@ def save_image(img, path):
     img.save(path)
 
 
+def save_image_naive(img, path):
+    img = np.clip(img / 255.0, 0, 1) * 255
+    img = PIL.Image.fromarray(img.astype('uint8'))
+    img.save(path)
+
+
 # generate an array of images with random noise (from a gaussian distribution)
 def random_noise_img(batch_size=1, x_dim=200, y_dim=200):
     array = np.zeros((batch_size, x_dim, y_dim, 3))
