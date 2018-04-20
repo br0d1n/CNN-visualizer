@@ -26,15 +26,14 @@ def save_image_naive(img, path):
     img.save(path)
 
 
-# generate an array of images with random noise (from a gaussian distribution)
-def random_noise_img(batch_size=1, x_dim=200, y_dim=200):
-    array = np.zeros((batch_size, x_dim, y_dim, 3))
-    for i in range(batch_size):
-        for x in range(x_dim):
-            for y in range(y_dim):
-                array[i][x][y][0] = float(min(255, max(0, random.gauss(117, 2.55))))
-                array[i][x][y][1] = float(min(255, max(0, random.gauss(117, 2.55))))
-                array[i][x][y][2] = float(min(255, max(0, random.gauss(117, 2.55))))
+# generate an array-image with random noise (from a gaussian distribution)
+def random_noise_img(x_dim=200, y_dim=200):
+    array = np.zeros((x_dim, y_dim, 3))
+    for x in range(x_dim):
+        for y in range(y_dim):
+            array[x][y][0] = float(min(255, max(0, random.gauss(117, 2.55))))
+            array[x][y][1] = float(min(255, max(0, random.gauss(117, 2.55))))
+            array[x][y][2] = float(min(255, max(0, random.gauss(117, 2.55))))
     return array
 
 

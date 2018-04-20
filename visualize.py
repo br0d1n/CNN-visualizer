@@ -9,16 +9,18 @@ import graph_builder
 import misc
 
 
-def visualize_features(model_path, input_name, opt, x_dim=128, y_dim=128, steps=150, lr=0.06,
-                    pad=None, jitter=None, rotate=None, scale=None, optimizer=None, dream_img=None):
+def visualize_features(model_path, input_name, opt, x_dim=128, y_dim=128, steps=150, lr=0.08,
+                    pad=None, jitter=None, rotate=None, scale=None, optimizer=None, dream_img=None, save_run=False):
 
     num_visualizations = 1
     mix = False
     if isinstance(opt, list):
-        if len(opt[0]) == 2:
-            num_visualizations = len(opt)
-        elif len(opt[0]) == 3:
+        num_visualizations = len(opt)
+        if len(opt[0]) == 3:
             mix = True
+            num_visualizations = 1
+        elif num_visualizations == 1:
+            opt = opt[0]
 
     # start the session
     with tf.Graph().as_default() as graph, tf.Session() as sess:
@@ -50,18 +52,19 @@ def visualize_features(model_path, input_name, opt, x_dim=128, y_dim=128, steps=
             # add the optimizer
             opt_tensor = optimizer.minimize(-loss)
 
-            # initalize variables
+            # initialize variables
             sess.run(tf.global_variables_initializer())
 
             for i in range(steps):
-                print(i)
+                print("vis #", n, "\tstep:", i)
 
-                # save the current optimized image (for testing and cool animations)
-                img = image_tensor.eval()[0]
-                if dream_img is None:
-                    misc.save_image(img, "out/test" + str(i) + ".jpg")
-                else:
-                    misc.save_image_naive(img, "out/test" + str(i) + ".jpg")
+                # save the current optimized image (for testing purposes and cool animations)
+                if save_run:
+                    img = image_tensor.eval()[0]
+                    if dream_img is None:
+                        misc.save_image(img, "out/test" + str(n) + "_" + str(i) + ".jpg")
+                    else:
+                        misc.save_image_naive(img, "out/test" + str(i) + ".jpg")
 
                 # optimize the image a little bit
                 sess.run([loss, opt_tensor])
@@ -76,6 +79,7 @@ def visualize_features(model_path, input_name, opt, x_dim=128, y_dim=128, steps=
 
 def create_loss(opt, graph):
 
+    # create loss from a single layer/channel
     if isinstance(opt, tuple):
         layer_name = opt[0]
         channel = opt[1]
@@ -83,6 +87,7 @@ def create_loss(opt, graph):
         layer_tensor = graph.get_tensor_by_name(layer_name)
         loss = tf.reduce_mean(layer_tensor[:, :, :, channel])
 
+    # create loss which is a mix of different optimization-objectives
     elif isinstance(opt, list):
         layer_tensor = graph.get_tensor_by_name(opt[0][0])
         channel_tensor = layer_tensor[:, :, :, opt[0][1]]
